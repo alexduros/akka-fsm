@@ -3,14 +3,17 @@ import akka.contrib.persistence.mongodb.{MongoReadJournal, ScalaDslMongoReadJour
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.common.{EntityStreamingSupport, JsonEntityStreamingSupport}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.marshalling.{Marshaller, Marshalling}
+import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
 import akka.stream.ActorMaterializer
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 import spray.json.DefaultJsonProtocol
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -25,17 +28,22 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
 
     implicit val numberFormat = jsonFormat1(NumberOrder)
 
-    implicit val jsonStreamingSupport: JsonEntityStreamingSupport = EntityStreamingSupport.json()
+    implicit val jsonEntityStreamingSupport: JsonEntityStreamingSupport = EntityStreamingSupport.json()
+
+    implicit val stringFormat = Marshaller[String, ByteString] { ec ⇒ s ⇒
+      Future.successful {
+        List(Marshalling.WithFixedContentType(ContentTypes.`application/json`, () ⇒
+          ByteString("\"" + s + "\"")) // "raw string" to be rendered as json element in our stream must be enclosed by ""
+        )
+      }
+    }
 
     val readJournal = PersistenceQuery(system).readJournalFor[ScalaDslMongoReadJournal](MongoReadJournal.Identifier)
 
     val route =
       path("workflows") {
         get {
-          complete {
-            readJournal
-              .allPersistenceIds()
-          }
+          complete(readJournal.currentPersistenceIds())
         } ~
         post {
           val generator = system.actorOf(Props[Generator])
