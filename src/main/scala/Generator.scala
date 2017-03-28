@@ -57,7 +57,7 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 		case Event(SetNumber(num), _) =>
 			println("STARTING IDLE")
 			goto(Active) applying SetNumberEvt(num)
-		case Event(Reset, _) => goto(Active) applying ResetEvt()
+		case Event(Reset, _) => goto(Active) applying ResetEvt() replying "ALREADY RESET"
 	}
 
 	when(Active) {

@@ -19,6 +19,7 @@ libraryDependencies ++= Seq(
 	"com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
 	"com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 	"com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
+	"com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.4.11.1",
 
 	"com.github.scullxbones" %% "akka-persistence-mongo-casbah" % "1.4.1",
 
