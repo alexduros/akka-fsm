@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-final case class NumberOrder(number: Int)
+final case class WorkflowModel(workflowId: Int)
 
 object Boot extends SprayJsonSupport with DefaultJsonProtocol {
   def main(args: Array[String]) {
@@ -26,7 +26,7 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
     implicit val ec = system.dispatcher
     implicit val timeout = Timeout(5 seconds)
 
-    implicit val numberFormat = jsonFormat1(NumberOrder)
+    implicit val numberFormat = jsonFormat1(WorkflowModel)
 
     implicit val jsonEntityStreamingSupport: JsonEntityStreamingSupport = EntityStreamingSupport.json()
 
@@ -46,20 +46,19 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
           complete(readJournal.currentPersistenceIds())
         } ~
         post {
-          val generator = system.actorOf(Props[Generator])
-          onComplete(generator ? Reset) {
-            case Success(_) => complete("workflow reset")
+          val uuid = java.util.UUID.randomUUID()
+          val workflow = system.actorOf(Props(classOf[Workflow], uuid.toString))
+          onComplete(workflow ? Start) {
+            case Success(_) => complete("workflow created and started")
             case Failure(ex) => complete((InternalServerError, s"An error occurred ${ex}"))
           }
         }
       } ~
-        path("workflows" / "numbers") {
+        path("workflows" / Segment / "pause") { workflowId =>
           post {
-            val generator = system.actorOf(Props[Generator])
-            entity(as[NumberOrder]) { order =>
-              generator ! SetNumber(order.number)
-              complete("data added")
-            }
+            val workflow = system.actorOf(Props(classOf[Workflow], workflowId.toString))
+            workflow ! Pause
+            complete("workflow successfully paused")
           }
         }
 
