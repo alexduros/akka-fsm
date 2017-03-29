@@ -28,6 +28,7 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
     implicit val timeout = Timeout(5 seconds)
 
     implicit val numberFormat = jsonFormat1(WorkflowModel)
+    implicit val statusFormat = jsonFormat1(WorkflowStatus)
 
     implicit val jsonEntityStreamingSupport: JsonEntityStreamingSupport = EntityStreamingSupport.json()
 
@@ -55,13 +56,6 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
           }
         }
       } ~
-      path("workflows" / Segment) { workflowId =>
-        val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
-        onComplete(workflow ? SubscribeTransitionCallBack) {
-          case Success(_) => complete("workflow found but unable to find response")
-          case Failure(ex) => complete((InternalServerError, s"An error occurred ${ex}"))
-        }
-      }
       path("workflows" / Segment / "pause") { workflowId =>
         post {
           val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
@@ -74,6 +68,14 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
           val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
           workflow ! Resume
           complete("workflow successfully resumed")
+        }
+      } ~
+      path("workflows" / Segment) { workflowId =>
+        val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
+        onComplete(workflow ? WorkflowDump) {
+          case Success(data: WorkflowStatus) => complete(data)
+          case Success(_) => complete((InternalServerError, s"Resource found but not serializable"))
+          case Failure(ex) => complete((InternalServerError, s"An error occurred ${ex}"))
         }
       }
 

@@ -38,6 +38,8 @@ final case class WorkflowStatus(state: String) extends Data {
 sealed trait DomainEvt
 case class SetWorkflowStatus(state: String) extends DomainEvt
 
+final case class WorkflowDump()
+
 case class Workflow(workflowId: String) extends PersistentFSM[State, Data, DomainEvt] {
   override def applyEvent(domainEvent: DomainEvt, currentData: Data): Data = {
     domainEvent match {
@@ -61,7 +63,11 @@ case class Workflow(workflowId: String) extends PersistentFSM[State, Data, Domai
 
   when(IngestCreation) {
     case Event(Pause, _) => stay applying SetWorkflowStatus("PAUSED")
-    case Event(Resume, _) => stay applying SetWorkflowStatus("RESUMED")
+    case Event(Resume, _) => stay applying SetWorkflowStatus("INPROGRESS")
     case Event(Finish, _) => goto(Idle) applying SetWorkflowStatus("FINISHED")
+  }
+
+  whenUnhandled {
+    case Event(WorkflowDump, _) => stay replying stateData
   }
 }
