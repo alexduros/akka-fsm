@@ -1,3 +1,4 @@
+import akka.actor.FSM.SubscribeTransitionCallBack
 import akka.actor.{ActorSystem, Props}
 import akka.contrib.persistence.mongodb.{MongoReadJournal, ScalaDslMongoReadJournal}
 import akka.http.scaladsl.Http
@@ -54,13 +55,27 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
           }
         }
       } ~
-        path("workflows" / Segment / "pause") { workflowId =>
-          post {
-            val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
-            workflow ! Pause
-            complete("workflow successfully paused")
-          }
+      path("workflows" / Segment) { workflowId =>
+        val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
+        onComplete(workflow ? SubscribeTransitionCallBack) {
+          case Success(_) => complete("workflow found but unable to find response")
+          case Failure(ex) => complete((InternalServerError, s"An error occurred ${ex}"))
         }
+      }
+      path("workflows" / Segment / "pause") { workflowId =>
+        post {
+          val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
+          workflow ! Pause
+          complete("workflow successfully paused")
+        }
+      } ~
+      path("workflows" / Segment / "resume") { workflowId =>
+        post {
+          val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
+          workflow ! Resume
+          complete("workflow successfully resumed")
+        }
+      }
 
     Http().bindAndHandle(route, "localhost", 8081)
   }

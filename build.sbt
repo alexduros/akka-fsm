@@ -4,7 +4,7 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
-fork := true
+fork in run := false
 
 val akkaVersion = "2.4.16"
 
