@@ -56,7 +56,7 @@ case class Workflow(workflowId: String) extends PersistentFSM[State, Data, Domai
 
   when(Idle) {
     case Event(Start, _) =>
-      goto(IngestCreation) replying "WORFKLOW STARTED" applying SetWorkflowStatus("INPROGRESS")
+      goto(IngestCreation) replying "WORKFLOW STARTED" applying SetWorkflowStatus("INPROGRESS")
   }
 
   when(IngestCreation) {

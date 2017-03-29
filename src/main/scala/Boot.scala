@@ -56,7 +56,7 @@ object Boot extends SprayJsonSupport with DefaultJsonProtocol {
       } ~
         path("workflows" / Segment / "pause") { workflowId =>
           post {
-            val workflow = system.actorOf(Props(classOf[Workflow], workflowId.toString))
+            val workflow = system.actorOf(Props(classOf[Workflow], workflowId))
             workflow ! Pause
             complete("workflow successfully paused")
           }
